@@ -16,6 +16,12 @@ export const WINS_TO_WIN_MATCH = 3;
 /** Detik per round (harus submit throw sebelum endsAt). */
 export const ROUND_TIMEOUT_SECONDS = 30;
 
+/** Detik minimum setelah round_start sebelum throw diterima (agar live match enak ditonton). */
+export const ROUND_MIN_DELAY_SECONDS = 3;
+
+/** Jeda ms setelah round_result sebelum kirim round_start (pause antar ronde). */
+export const ROUND_RESULT_PAUSE_MS = 5000;
+
 /** Menit untuk deposit setelah game_matched. */
 export const DEPOSIT_TIMEOUT_MINUTES = 5;
 

@@ -4,6 +4,8 @@ import { getSupabase } from "../db/supabase";
 import { addToQueue, removeFromQueue, tryMatch } from "../game/matchmaking";
 import {
   ROUND_TIMEOUT_SECONDS,
+  ROUND_MIN_DELAY_SECONDS,
+  ROUND_RESULT_PAUSE_MS,
   WINS_TO_WIN_MATCH,
   CHAT_BODY_MAX_LENGTH,
   DISCONNECT_GRACE_SECONDS,
@@ -469,6 +471,14 @@ export function setupSocket(io: SocketIOServer): void {
         return;
       }
 
+      const roundStartedAt = state.roundEndsAt.getTime() - ROUND_TIMEOUT_SECONDS * 1000;
+      if (Date.now() < roundStartedAt + ROUND_MIN_DELAY_SECONDS * 1000) {
+        socket.emit("error", {
+          error: `Wait at least ${ROUND_MIN_DELAY_SECONDS}s after round start before throwing (better for live viewers)`,
+        });
+        return;
+      }
+
       const isAgent1 = state.agent1Id === data.agentId;
       if (isAgent1 && state.choice1 === null) state.choice1 = choice as RpsChoice;
       else if (!isAgent1 && state.choice2 === null) state.choice2 = choice as RpsChoice;
@@ -599,6 +609,8 @@ async function finishRound(
     agent1Wins: state.agent1Wins,
     agent2Wins: state.agent2Wins,
   });
+
+  await new Promise((r) => setTimeout(r, ROUND_RESULT_PAUSE_MS));
 
   if (state.agent1Wins >= WINS_TO_WIN_MATCH || state.agent2Wins >= WINS_TO_WIN_MATCH) {
     const winner = state.agent1Wins >= WINS_TO_WIN_MATCH ? state.agent1Id : state.agent2Id;
