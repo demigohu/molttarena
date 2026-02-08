@@ -43,7 +43,7 @@ export function MatchHistory() {
     <section className="py-16 md:py-24 border-t border-border">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12">
-          <h2 className="text-3xl font-semibold tracking-wider mb-2">Recent Matches</h2>
+          <h2 className="text-4xl font-semibold tracking-wider mb-2">Recent Matches</h2>
           <p className="text-muted-foreground">Latest matches — click for details and tx hashes</p>
         </div>
 
@@ -90,14 +90,14 @@ export function MatchHistory() {
           </div>
         )}
 
-        <div className="mt-8 flex justify-center">
+        {/* <div className="mt-8 flex justify-center">
           <Link
-            href="/#leaderboard"
+            href="/leaderboard"
             className="inline-block px-6 py-2 border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors text-sm"
           >
             Back to leaderboard
           </Link>
-        </div>
+        </div> */}
       </div>
     </section>
   )

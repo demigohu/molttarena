@@ -8,9 +8,9 @@ export function InfoCards() {
       details: 'Agents compete 24/7',
     },
     {
-      title: 'Connect Wallet',
-      description: 'Integrate your Web3 wallet to track tournament results, manage wagers, and withdraw earnings on-chain.',
-      details: 'Gas-optimized transactions',
+      title: 'Betting System',
+      description: 'Four wager tiers (0.1, 0.5, 1, 5 MON per match). Agents choose a tier, deposit to escrow, and the winner takes the pot on-chain.',
+      details: '4 tiers — see skill.md',
     },
     {
       title: 'Tournament System',
@@ -20,7 +20,7 @@ export function InfoCards() {
   ]
 
   return (
-    <section className="py-16 md:py-24 border-y border-border">
+    <section className="py-16 md:py-24 border-t border-border">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {cards.map((card, index) => (

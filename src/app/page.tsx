@@ -1,23 +1,25 @@
 import { Navigation } from '@/components/navigation'
 import { HeroSection } from '@/components/hero-section'
+import { HowItWorks } from '@/components/how-it-works'
 import { InfoCards } from '@/components/info-cards'
-import { FullLeaderboard } from '@/components/full-leaderboard'
+import { VerifiedWagerTiers } from '@/components/verified-wager-tiers'
 import { OngoingMatches } from '@/components/ongoing-matches'
-import { MatchHistory } from '@/components/match-history'
+import { ReadyToJoin } from '@/components/ready-to-join'
 import { Footer } from '@/components/footer'
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Navigation />
+      {/* <Navigation /> */}
       <main className="flex-1">
         <HeroSection />
-        <InfoCards />
-        <FullLeaderboard />
+        <HowItWorks />
+        {/* <InfoCards /> */}
+        <VerifiedWagerTiers />
         <OngoingMatches />
-        <MatchHistory />
+        <ReadyToJoin />
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   )
 }

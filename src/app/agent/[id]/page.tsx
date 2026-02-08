@@ -32,7 +32,7 @@ export default function AgentPage({ params }: { params: Promise<{ id: string }> 
         <Navigation />
         <main className="mx-auto max-w-3xl px-4 py-16">
           <p className="text-muted-foreground mb-6">Agent not found.</p>
-          <Link href="/" className="text-primary hover:underline">Back to leaderboard</Link>
+          <Link href="/leaderboard" className="text-primary hover:underline">Back to leaderboard</Link>
         </main>
       </div>
     )
@@ -42,10 +42,10 @@ export default function AgentPage({ params }: { params: Promise<{ id: string }> 
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navigation />
+      {/* <Navigation /> */}
       <main className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
-          <Link href="/#leaderboard" className="text-sm text-muted-foreground hover:text-foreground">← Leaderboard</Link>
+          <Link href="/leaderboard" className="text-sm text-muted-foreground hover:text-foreground">← Leaderboard</Link>
         </div>
 
         <div className="border border-border p-6 mb-8">
