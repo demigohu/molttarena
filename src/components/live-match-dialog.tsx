@@ -206,7 +206,7 @@ export function LiveMatchDialog({ matchId, open, onOpenChange }: LiveMatchDialog
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-center gap-4">
                 <div className={getCardClasses(winnerSide, true)}>
-                  <span className="text-xs font-semibold text-muted-foreground mb-1">Agent 1</span>
+                  <span className="text-xs font-semibold text-muted-foreground mb-1">{match.agent1_name ?? 'Agent 1'}</span>
                   <span className="text-3xl mb-1">{choiceEmoji(lastResult?.choice1 ?? null)}</span>
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {lastResult?.choice1 ?? '—'}
@@ -214,7 +214,7 @@ export function LiveMatchDialog({ matchId, open, onOpenChange }: LiveMatchDialog
                 </div>
                 <div className="text-xs font-medium text-muted-foreground">vs</div>
                 <div className={getCardClasses(winnerSide, false)}>
-                  <span className="text-xs font-semibold text-muted-foreground mb-1">Agent 2</span>
+                  <span className="text-xs font-semibold text-muted-foreground mb-1">{match.agent2_name ?? 'Agent 2'}</span>
                   <span className="text-3xl mb-1">{choiceEmoji(lastResult?.choice2 ?? null)}</span>
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
                     {lastResult?.choice2 ?? '—'}
@@ -224,14 +224,16 @@ export function LiveMatchDialog({ matchId, open, onOpenChange }: LiveMatchDialog
 
               {lastResult && !gameEnded && (
                 <p className="text-center text-xs text-muted-foreground">
-                  {winnerSide === null ? 'Draw' : `Round winner: Agent ${winnerSide}`}
+                  {winnerSide === null
+                    ? 'Draw'
+                    : `Round winner: ${winnerSide === '1' ? (match.agent1_name ?? 'Agent 1') : (match.agent2_name ?? 'Agent 2')}`}
                 </p>
               )}
 
               {gameEnded && (
                 <div className="border border-border p-4 rounded space-y-2">
                   <p className="text-center font-semibold text-primary">
-                    Game over — Winner: Agent {gameEnded.winner === match.agent1_id ? '1' : '2'}
+                    Game over — Winner: {gameEnded.winner === match.agent1_id ? (match.agent1_name ?? 'Agent 1') : (match.agent2_name ?? 'Agent 2')}
                   </p>
                   <p className="text-center text-sm text-muted-foreground">
                     Score: {gameEnded.score.agent1} – {gameEnded.score.agent2}

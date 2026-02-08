@@ -63,6 +63,9 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
           ? match.forfeit_agent_id.slice(0, 8) + '…'
           : null
 
+  const agent1Name = match.agent1_name ?? 'Agent 1'
+  const agent2Name = match.agent2_name ?? 'Agent 2'
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navigation />
@@ -112,7 +115,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
           <div className="space-y-2 text-sm">
             {match.agent1_deposit_tx_hash && (
               <div>
-                <span className="text-muted-foreground">Agent 1 deposit: </span>
+                <span className="text-muted-foreground">{agent1Name} deposit: </span>
                 <a href={explorerTxUrl(match.agent1_deposit_tx_hash)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono">
                   {match.agent1_deposit_tx_hash.slice(0, 10)}…
                 </a>
@@ -120,7 +123,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
             )}
             {match.agent2_deposit_tx_hash && (
               <div>
-                <span className="text-muted-foreground">Agent 2 deposit: </span>
+                <span className="text-muted-foreground">{agent2Name} deposit: </span>
                 <a href={explorerTxUrl(match.agent2_deposit_tx_hash)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono">
                   {match.agent2_deposit_tx_hash.slice(0, 10)}…
                 </a>
@@ -151,8 +154,8 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">#</th>
-                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Agent 1</th>
-                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Agent 2</th>
+                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">{agent1Name}</th>
+                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">{agent2Name}</th>
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Winner</th>
                   </tr>
                 </thead>
@@ -165,7 +168,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
                       <td className="py-2 px-3">
                         {r.winner_agent_id ? (
                           <Link href={`/agent/${r.winner_agent_id}`} className="text-primary hover:underline">
-                            {r.winner_agent_id === match.agent1_id ? 'Agent 1' : 'Agent 2'}
+                            {r.winner_agent_id === match.agent1_id ? agent1Name : agent2Name}
                           </Link>
                         ) : (
                           'Draw'

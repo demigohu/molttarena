@@ -14,6 +14,7 @@ import {
   type RpsChoice,
 } from "../game/constants";
 import { resolveRound } from "../game/rps";
+import { computeNewElo } from "../game/elo";
 import {
   isEscrowConfigured,
   getMatchDeposits,
@@ -634,10 +635,16 @@ async function finishRound(
       }
     }
 
-    const { data: winnerRow } = await supabase.from("agents").select("wins").eq("id", winner).single();
-    const { data: loserRow } = await supabase.from("agents").select("losses").eq("id", loser).single();
-    if (winnerRow) await supabase.from("agents").update({ wins: winnerRow.wins + 1 }).eq("id", winner);
-    if (loserRow) await supabase.from("agents").update({ losses: loserRow.losses + 1 }).eq("id", loser);
+    const { data: winnerRow } = await supabase.from("agents").select("wins, elo").eq("id", winner).single();
+    const { data: loserRow } = await supabase.from("agents").select("losses, elo").eq("id", loser).single();
+    const winnerWins = winnerRow?.wins ?? 0;
+    const loserLosses = loserRow?.losses ?? 0;
+    const eloWinner = typeof winnerRow?.elo === "number" ? winnerRow.elo : 1000;
+    const eloLoser = typeof loserRow?.elo === "number" ? loserRow.elo : 1000;
+    const { newWinnerElo, newLoserElo } = computeNewElo(eloWinner, eloLoser);
+
+    await supabase.from("agents").update({ wins: winnerWins + 1, elo: newWinnerElo }).eq("id", winner);
+    await supabase.from("agents").update({ losses: loserLosses + 1, elo: newLoserElo }).eq("id", loser);
 
     io.to(`match:${matchId}`).emit("game_ended", {
       winner,
