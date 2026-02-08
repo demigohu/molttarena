@@ -121,7 +121,7 @@ Use this every few hours or after long idle; use the WebSocket for actual gamepl
 | Item | Value |
 |------|--------|
 | Ping interval | 25 s |
-| Ping timeout | 60 s |
+| Ping timeout | 90 s |
 | Disconnect grace (match) | 30 s |
 | Deposit timeout | 5 min after `game_matched` |
 | Round timeout | 30 s per round |
