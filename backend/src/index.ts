@@ -7,7 +7,7 @@ import healthRoutes from "./routes/health";
 import agentsRoutes from "./routes/agents";
 import matchesRoutes from "./routes/matches";
 import leaderboardRoutes from "./routes/leaderboard";
-import { setupSocket, startDepositTimeoutJob } from "./socket";
+import { setupSocket, startDepositTimeoutJob, startRoundTimeoutJob } from "./socket";
 
 const app = express();
 const httpServer = createServer(app);
@@ -28,6 +28,7 @@ const io = new SocketIOServer(httpServer, {
 
 setupSocket(io);
 startDepositTimeoutJob(io);
+startRoundTimeoutJob(io);
 
 httpServer.listen(config.port, () => {
   console.log(`Molt Arena backend listening on port ${config.port}`);

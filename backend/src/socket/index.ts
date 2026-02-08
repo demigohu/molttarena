@@ -43,6 +43,48 @@ const matchState = new Map<
 const socketToAgent = new Map<string, string>();
 
 const DEPOSIT_TIMEOUT_JOB_MS = 60_000;
+const ROUND_TIMEOUT_JOB_MS = 5_000;
+
+/** Run periodically: resolve rounds that passed round_ends_at (one or both didn't throw). */
+export function startRoundTimeoutJob(io: SocketIOServer): void {
+  setInterval(async () => {
+    const now = new Date();
+
+    // In-memory: resolve timed-out rounds
+    for (const [matchId, state] of matchState.entries()) {
+      if (state.roundEndsAt >= now) continue;
+      if (state.choice1 !== null && state.choice2 !== null) continue; // will be resolved by throw handler
+      const timeoutWinner = getRoundTimeoutWinner(state);
+      void finishRound(io, matchId, state, { timeoutWinnerId: timeoutWinner });
+    }
+
+    // Recovery: matches stuck in DB (status=playing, round_ends_at past) but not in memory
+    const supabase = getSupabase();
+    const { data: stuck } = await supabase
+      .from("matches")
+      .select("id, agent1_id, agent2_id, agent1_wins, agent2_wins, current_round")
+      .eq("status", "playing")
+      .not("round_ends_at", "is", null)
+      .lt("round_ends_at", now.toISOString());
+    if (stuck?.length) {
+      for (const row of stuck) {
+        if (matchState.has(row.id)) continue;
+        const state: MatchState = {
+          agent1Id: row.agent1_id,
+          agent2Id: row.agent2_id,
+          agent1Wins: row.agent1_wins ?? 0,
+          agent2Wins: row.agent2_wins ?? 0,
+          currentRound: row.current_round ?? 1,
+          roundEndsAt: new Date(0),
+          choice1: null,
+          choice2: null,
+        };
+        matchState.set(row.id, state);
+        void finishRound(io, row.id, state, { timeoutWinnerId: null });
+      }
+    }
+  }, ROUND_TIMEOUT_JOB_MS);
+}
 
 /** Run periodically: cancel matches past deposit_timeout_at and emit match_cancelled. */
 export function startDepositTimeoutJob(io: SocketIOServer): void {
@@ -168,14 +210,15 @@ export function setupSocket(io: SocketIOServer): void {
         return;
       }
       const supabase = getSupabase();
+      // Allow saving hash while waiting_deposits OR playing (game may start from escrow before client sends hash)
       const { data: match, error } = await supabase
         .from("matches")
         .select("id, agent1_id, agent2_id, status, agent1_deposit_tx_hash, agent2_deposit_tx_hash")
         .eq("id", gameId)
-        .eq("status", "waiting_deposits")
+        .in("status", ["waiting_deposits", "playing"])
         .single();
       if (error || !match) {
-        socket.emit("error", { error: "Match not found or not waiting for deposits" });
+        socket.emit("error", { error: "Match not found or not in waiting_deposits/playing" });
         return;
       }
       const isAgent1 = match.agent1_id === data.agentId;
@@ -395,13 +438,23 @@ type MatchState = {
   choice2: RpsChoice | null;
 };
 
-async function finishRound(io: SocketIOServer, matchId: string, state: MatchState): Promise<void> {
-  const winnerId = resolveRound(
-    state.choice1,
-    state.choice2,
-    state.agent1Id,
-    state.agent2Id
-  );
+/** When round timed out: winner is who submitted, or null if neither. */
+function getRoundTimeoutWinner(state: MatchState): string | null {
+  if (state.choice1 !== null && state.choice2 === null) return state.agent1Id;
+  if (state.choice1 === null && state.choice2 !== null) return state.agent2Id;
+  return null; // both null = draw
+}
+
+async function finishRound(
+  io: SocketIOServer,
+  matchId: string,
+  state: MatchState,
+  opts?: { timeoutWinnerId?: string | null }
+): Promise<void> {
+  const winnerId =
+    opts?.timeoutWinnerId !== undefined
+      ? opts.timeoutWinnerId
+      : resolveRound(state.choice1, state.choice2, state.agent1Id, state.agent2Id);
 
   if (winnerId === state.agent1Id) state.agent1Wins++;
   else if (winnerId === state.agent2Id) state.agent2Wins++;
