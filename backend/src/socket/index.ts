@@ -151,8 +151,8 @@ export function setupSocket(io: SocketIOServer): void {
       agent1Socket?.emit("game_matched", payload1);
       agent2Socket?.emit("game_matched", payload2);
 
-      (agent1Socket?.data as SocketData).currentMatchId = matchId;
-      (agent2Socket?.data as SocketData).currentMatchId = matchId;
+      if (agent1Socket?.data !== undefined) (agent1Socket.data as SocketData).currentMatchId = matchId;
+      if (agent2Socket?.data !== undefined) (agent2Socket.data as SocketData).currentMatchId = matchId;
     });
 
     socket.on("deposit_tx", async (payload: { gameId?: string; txHash?: string }) => {
