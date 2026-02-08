@@ -22,6 +22,9 @@ export const DEPOSIT_TIMEOUT_MINUTES = 5;
 /** Detik grace period setelah disconnect sebelum forfeit match. */
 export const DISCONNECT_GRACE_SECONDS = 30;
 
+/** Max karakter body pesan in-match chat (PRD §9.1). */
+export const CHAT_BODY_MAX_LENGTH = 150;
+
 export type RpsChoice = "rock" | "paper" | "scissors";
 
 export function getWagerAmount(tier: WagerTier): number {

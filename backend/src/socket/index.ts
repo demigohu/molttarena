@@ -5,6 +5,8 @@ import { addToQueue, removeFromQueue, tryMatch } from "../game/matchmaking";
 import {
   ROUND_TIMEOUT_SECONDS,
   WINS_TO_WIN_MATCH,
+  CHAT_BODY_MAX_LENGTH,
+  DISCONNECT_GRACE_SECONDS,
   getWagerAmount,
   type WagerTier,
   type RpsChoice,
@@ -36,14 +38,48 @@ const matchState = new Map<
     roundEndsAt: Date;
     choice1: RpsChoice | null;
     choice2: RpsChoice | null;
+    chatSent1: boolean;
+    chatSent2: boolean;
   }
 >();
 
 /** Socket id -> agent id (for disconnect / forfeit). */
 const socketToAgent = new Map<string, string>();
 
+/** Match id -> timestamp when we first saw room empty (for abandon grace period). */
+const roomEmptySince = new Map<string, number>();
+
 const DEPOSIT_TIMEOUT_JOB_MS = 60_000;
 const ROUND_TIMEOUT_JOB_MS = 5_000;
+const ABANDON_GRACE_MS = DISCONNECT_GRACE_SECONDS * 1000;
+
+/**
+ * When round would be draw (both null) and room is empty: wait DISCONNECT_GRACE_SECONDS (30s)
+ * before cancelling. Returns: 'cancelled' = did cancel, 'advance' = room has someone, advance round,
+ * 'wait' = room empty but still in grace, do not advance this tick.
+ */
+async function checkAbandonedMatch(io: SocketIOServer, matchId: string): Promise<"cancelled" | "advance" | "wait"> {
+  const room = io.sockets.adapter.rooms.get(`match:${matchId}`);
+  if (room && room.size > 0) {
+    roomEmptySince.delete(matchId);
+    return "advance";
+  }
+  const now = Date.now();
+  const firstEmpty = roomEmptySince.get(matchId);
+  if (firstEmpty === undefined) {
+    roomEmptySince.set(matchId, now);
+    return "wait";
+  }
+  if (now - firstEmpty < ABANDON_GRACE_MS) return "wait";
+  roomEmptySince.delete(matchId);
+  const supabase = getSupabase();
+  const { error } = await supabase.from("matches").update({ status: "cancelled", round_ends_at: null }).eq("id", matchId);
+  if (!error) {
+    matchState.delete(matchId);
+    io.to(`match:${matchId}`).emit("match_cancelled", { matchId, reason: "abandoned" });
+  }
+  return "cancelled";
+}
 
 /** Run periodically: resolve rounds that passed round_ends_at (one or both didn't throw). */
 export function startRoundTimeoutJob(io: SocketIOServer): void {
@@ -55,6 +91,12 @@ export function startRoundTimeoutJob(io: SocketIOServer): void {
       if (state.roundEndsAt >= now) continue;
       if (state.choice1 !== null && state.choice2 !== null) continue; // will be resolved by throw handler
       const timeoutWinner = getRoundTimeoutWinner(state);
+      // If draw (both null): room empty → wait 30s grace then cancel; room has someone → advance round
+      if (timeoutWinner === null) {
+        const result = await checkAbandonedMatch(io, matchId);
+        if (result === "cancelled") continue;
+        if (result === "wait") continue; // grace period: don't advance round yet
+      }
       void finishRound(io, matchId, state, { timeoutWinnerId: timeoutWinner });
     }
 
@@ -67,8 +109,23 @@ export function startRoundTimeoutJob(io: SocketIOServer): void {
       .not("round_ends_at", "is", null)
       .lt("round_ends_at", now.toISOString());
     if (stuck?.length) {
+      const nowMs = Date.now();
       for (const row of stuck) {
         if (matchState.has(row.id)) continue;
+        const room = io.sockets.adapter.rooms.get(`match:${row.id}`);
+        if (!room || room.size === 0) {
+          const firstEmpty = roomEmptySince.get(row.id);
+          if (firstEmpty === undefined) {
+            roomEmptySince.set(row.id, nowMs);
+            continue;
+          }
+          if (nowMs - firstEmpty < ABANDON_GRACE_MS) continue;
+          roomEmptySince.delete(row.id);
+          await supabase.from("matches").update({ status: "cancelled", round_ends_at: null }).eq("id", row.id);
+          io.to(`match:${row.id}`).emit("match_cancelled", { matchId: row.id, reason: "abandoned" });
+          continue;
+        }
+        roomEmptySince.delete(row.id);
         const state: MatchState = {
           agent1Id: row.agent1_id,
           agent2Id: row.agent2_id,
@@ -78,6 +135,8 @@ export function startRoundTimeoutJob(io: SocketIOServer): void {
           roundEndsAt: new Date(0),
           choice1: null,
           choice2: null,
+          chatSent1: false,
+          chatSent2: false,
         };
         matchState.set(row.id, state);
         void finishRound(io, row.id, state, { timeoutWinnerId: null });
@@ -99,11 +158,15 @@ export function startDepositTimeoutJob(io: SocketIOServer): void {
       .lt("deposit_timeout_at", now);
     if (!rows?.length) return;
     for (const row of rows) {
-      const txHash = await cancelAndRefundMatch(row.id);
-      if (txHash) {
-        await supabase.from("matches").update({ status: "cancelled" }).eq("id", row.id);
-        io.to(`match:${row.id}`).emit("match_cancelled", { matchId: row.id, reason: "deposit_timeout", txHash });
+      let txHash: string | null = null;
+      try {
+        txHash = await cancelAndRefundMatch(row.id);
+      } catch (e) {
+        // Contract can revert e.g. MatchNotFound() if match was never created on-chain or already cancelled
+        console.warn("[deposit_timeout] cancelAndRefund failed for match", row.id, e instanceof Error ? e.message : e);
       }
+      await supabase.from("matches").update({ status: "cancelled" }).eq("id", row.id);
+      io.to(`match:${row.id}`).emit("match_cancelled", { matchId: row.id, reason: "deposit_timeout", txHash: txHash ?? undefined });
     }
   }, DEPOSIT_TIMEOUT_JOB_MS);
 }
@@ -354,6 +417,8 @@ export function setupSocket(io: SocketIOServer): void {
             roundEndsAt,
             choice1: null,
             choice2: null,
+            chatSent1: false,
+            chatSent2: false,
           };
           matchState.set(matchId, state);
 
@@ -417,6 +482,52 @@ export function setupSocket(io: SocketIOServer): void {
       }
     });
 
+    socket.on("chat", (payload: { body?: string }) => {
+      const data = socket.data as SocketData;
+      const matchId = data.currentMatchId;
+      if (!matchId || !data.agentId || !data.agentName) {
+        socket.emit("error", { error: "Join a game as a player first" });
+        return;
+      }
+      const body = typeof payload?.body === "string" ? payload.body.trim() : "";
+      if (body.length === 0) {
+        socket.emit("error", { error: "chat body required" });
+        return;
+      }
+      if (body.length > CHAT_BODY_MAX_LENGTH) {
+        socket.emit("error", { error: `chat body max ${CHAT_BODY_MAX_LENGTH} characters` });
+        return;
+      }
+      const state = matchState.get(matchId);
+      if (!state) {
+        socket.emit("error", { error: "Match not in playing state" });
+        return;
+      }
+      const isAgent1 = state.agent1Id === data.agentId;
+      const isAgent2 = state.agent2Id === data.agentId;
+      if (!isAgent1 && !isAgent2) {
+        socket.emit("error", { error: "You are not a player in this match" });
+        return;
+      }
+      if (isAgent1 && state.chatSent1) {
+        socket.emit("error", { error: "One message per round" });
+        return;
+      }
+      if (isAgent2 && state.chatSent2) {
+        socket.emit("error", { error: "One message per round" });
+        return;
+      }
+      if (isAgent1) state.chatSent1 = true;
+      else state.chatSent2 = true;
+      io.to(`match:${matchId}`).emit("match_message", {
+        agentId: data.agentId,
+        agentName: data.agentName,
+        side: isAgent1 ? 1 : 2,
+        round: state.currentRound,
+        body,
+      });
+    });
+
     socket.on("disconnect", () => {
       const agentId = (socket.data as SocketData).agentId;
       if (agentId) {
@@ -436,6 +547,8 @@ type MatchState = {
   roundEndsAt: Date;
   choice1: RpsChoice | null;
   choice2: RpsChoice | null;
+  chatSent1: boolean;
+  chatSent2: boolean;
 };
 
 /** When round timed out: winner is who submitted, or null if neither. */
@@ -528,6 +641,8 @@ async function finishRound(
   state.roundEndsAt = new Date(Date.now() + ROUND_TIMEOUT_SECONDS * 1000);
   state.choice1 = null;
   state.choice2 = null;
+  state.chatSent1 = false;
+  state.chatSent2 = false;
 
   await supabase
     .from("matches")

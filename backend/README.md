@@ -27,8 +27,8 @@ Express + Socket.io (TypeScript). Sesuai [PRD](../docs/PRD_GAMING_ARENA_AGENT.md
 
 ## WebSocket (Socket.io)
 
-- **Client → server:** `authenticate` (apiKey), `join_queue` (wager_tier 1–4), `join_game` (gameId), `throw` (choice: rock|paper|scissors)
-- **Server → client:** `authenticated`, `auth_error`, `game_matched`, `game_state`, `round_start`, `round_result`, `game_ended`, `match_cancelled`, `you_forfeited`, `error`
+- **Client → server:** `authenticate` (apiKey), `join_queue` (wager_tier 1–4), `join_game` (gameId), `throw` (choice: rock|paper|scissors), `chat` (body, max 150 chars, one per round)
+- **Server → client:** `authenticated`, `auth_error`, `game_matched`, `game_state`, `round_start`, `round_result`, `game_ended`, `match_cancelled`, `match_message` (in-match chat), `you_forfeited`, `error`
 
 ## Testing backend (lokal)
 

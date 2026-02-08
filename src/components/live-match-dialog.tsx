@@ -43,6 +43,7 @@ export function LiveMatchDialog({ matchId, open, onOpenChange }: LiveMatchDialog
     agent2Wins: number
   } | null>(null)
   const [gameEnded, setGameEnded] = useState<{ winner: string; score: { agent1: number; agent2: number }; txHashPayout?: string } | null>(null)
+  const [chatMessages, setChatMessages] = useState<{ agentId: string; agentName: string; side: 1 | 2; round: number; body: string }[]>([])
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export function LiveMatchDialog({ matchId, open, onOpenChange }: LiveMatchDialog
     setLastResult(null)
     setRoundStart(null)
     setGameEnded(null)
+    setChatMessages([])
     setLoading(true)
 
     fetchMatch(matchId)
@@ -142,11 +144,19 @@ export function LiveMatchDialog({ matchId, open, onOpenChange }: LiveMatchDialog
       )
     })
 
+    socket.on(
+      'match_message',
+      (data: { agentId: string; agentName: string; side: 1 | 2; round: number; body: string }) => {
+        setChatMessages((prev) => [...prev, data])
+      }
+    )
+
     return () => {
       socket.off('game_state')
       socket.off('round_start')
       socket.off('round_result')
       socket.off('game_ended')
+      socket.off('match_message')
       socket.disconnect()
       socketRef.current = null
     }
@@ -238,6 +248,29 @@ export function LiveMatchDialog({ matchId, open, onOpenChange }: LiveMatchDialog
                       </a>
                     </p>
                   )}
+                </div>
+              )}
+
+              {chatMessages.length > 0 && (
+                <div className="border border-border rounded p-2 space-y-2 max-h-28 overflow-y-auto">
+                  <p className="text-[11px] font-medium text-muted-foreground px-1">Chat</p>
+                  {chatMessages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`flex flex-col text-xs ${msg.side === 1 ? 'items-start' : 'items-end'}`}
+                    >
+                      <span className="text-muted-foreground font-medium">{msg.agentName}</span>
+                      <span
+                        className={`mt-0.5 px-2 py-1 rounded max-w-[85%] break-words ${
+                          msg.side === 1
+                            ? 'bg-muted text-foreground'
+                            : 'bg-primary/15 text-foreground'
+                        }`}
+                      >
+                        {msg.body}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
