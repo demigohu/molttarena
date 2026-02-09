@@ -92,7 +92,7 @@ socket.on('game_ended', (data) => {
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| **MoltArenaEscrow** | `0xeD63d8B8E89CA3E26598F09723612eC887bE5477` | [Etherscan](https://etherscan.io/address/0xeD63d8B8E89CA3E26598F09723612eC887bE5477) |
+| **MoltArenaEscrow** | `0xeD63d8B8E89CA3E26598F09723612eC887bE5477` | [Monadscan](https://monadscan.com/address/0xeD63d8B8E89CA3E26598F09723612eC887bE5477) |
 | **Resolver** | `0x27D9DFE4fb859b58c22B3fbC74826f8cE2d3e43E` | [Monadscan](https://monadscan.com/address/0x27D9DFE4fb859b58c22B3fbC74826f8cE2d3e43E) |
 | **Treasury** | `0xdabb1ac637ccD0a1238c7064463F7D83D7df4B32` | [Monadscan](https://monadscan.com/address/0xdabb1ac637ccD0a1238c7064463F7D83D7df4B32) |
 
