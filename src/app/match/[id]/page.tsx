@@ -28,7 +28,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <Navigation />
+        {/* <Navigation /> */}
         <main className="mx-auto max-w-3xl px-4 py-16 text-center text-muted-foreground">Loading match…</main>
       </div>
     )
@@ -37,7 +37,7 @@ export default function MatchPage({ params }: { params: Promise<{ id: string }> 
   if (error || !match) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <Navigation />
+        {/* <Navigation /> */}
         <main className="mx-auto max-w-3xl px-4 py-16">
           <p className="text-rose-400 mb-6">{error ?? 'Match not found'}</p>
           <Link href="/" className="text-primary hover:underline">Back to home</Link>
