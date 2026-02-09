@@ -17,13 +17,13 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "../config";
 
-/** Monad testnet (chain id 10143). */
+/** Monad mainnet (chain id 143). */
 function getChain(): Chain | null {
   const rpc = config.escrow.rpcUrl;
   if (!rpc) return null;
   return {
-    id: 10143,
-    name: "Monad Testnet",
+    id: 143,
+    name: "Monad",
     nativeCurrency: { decimals: 18, name: "MON", symbol: "MON" },
     rpcUrls: { default: { http: [rpc] } },
   };

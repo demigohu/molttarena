@@ -16,6 +16,7 @@ remappings = [
 
 [rpc_endpoints]
 monad-testnet = "${MONAD_TESTNET_URL}"
+monad = "${MONAD_URL}"
 
 [etherscan]
 monad-testnet = { key = "${ETHERSCAN_API_KEY}", url = "https://explorer.sepolia.mantle.xyz/api" }

@@ -9,7 +9,7 @@ export function getWsUrl(): string {
   return base.replace(/^http/, 'ws')
 }
 
-export const MONAD_EXPLORER_TX = 'https://testnet.monadscan.com/tx/'
+export const MONAD_EXPLORER_TX = 'https://monadscan.com/tx/'
 
 export type LeaderboardEntry = {
   id: string
