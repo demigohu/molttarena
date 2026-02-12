@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Documentation/
 docs/
+
+#SDK
+agent-sdk/
